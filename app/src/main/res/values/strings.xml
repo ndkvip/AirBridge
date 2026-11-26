@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_service_desc">Cho phép AirBridge nhận thao tác chạm, vuốt và nút điều hướng (Back/Home/Đa nhiệm) từ máy Mac khi đang truyền màn hình.</string>
+</resources>

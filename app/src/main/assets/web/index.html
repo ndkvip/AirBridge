@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AirBridge — O+ Connect Web Portal</title>
+<style>
+  :root {
+    --bg: #0b101b;
+    --surface: #131b2b;
+    --surface2: #1c273d;
+    --border: rgba(148,163,184,0.16);
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+    --primary: #4f9cf9;
+    --green: #34d399;
+    --red: #f87171;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif; }
+  body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+  header {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 16px 24px; background: var(--surface); border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 20;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .logo {
+    width: 38px; height: 38px; border-radius: 12px;
+    background: linear-gradient(135deg, #3b82f6, #10b981);
+    display: grid; place-items: center; font-weight: 800; font-size: 16px; color: #fff;
+  }
+  .brand h1 { font-size: 17px; font-weight: 700; }
+  .brand p { font-size: 12px; color: var(--muted); }
+  .status-pill {
+    font-size: 12px; padding: 6px 12px; border-radius: 999px;
+    background: rgba(52,211,153,0.15); color: var(--green); border: 1px solid rgba(52,211,153,0.3);
+  }
+  nav {
+    display: flex; gap: 8px; padding: 12px 24px; background: var(--surface);
+    border-bottom: 1px solid var(--border); overflow-x: auto;
+  }
+  .tab {
+    padding: 9px 16px; border-radius: 12px; border: 1px solid transparent;
+    background: transparent; color: var(--muted); cursor: pointer; font-weight: 600; font-size: 14px;
+    white-space: nowrap; transition: all .15s;
+  }
+  .tab:hover { background: var(--surface2); color: var(--text); }
+  .tab.active { background: rgba(79,156,249,0.18); color: var(--primary); border-color: rgba(79,156,249,0.4); }
+  main { flex: 1; max-width: 1120px; width: 100%; margin: 0 auto; padding: 24px; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+    padding: 20px; margin-bottom: 18px;
+  }
+  .dropzone {
+    border: 2px dashed rgba(79,156,249,0.5); border-radius: 20px; padding: 48px 24px;
+    text-align: center; cursor: pointer; transition: all .15s; background: rgba(79,156,249,0.05);
+  }
+  .dropzone.dragover { background: rgba(79,156,249,0.16); border-color: var(--primary); }
+  .dropzone h2 { font-size: 18px; margin-bottom: 6px; }
+  .dropzone p { color: var(--muted); font-size: 14px; }
+  .btn {
+    background: var(--primary); color: #061529; border: none; border-radius: 12px;
+    padding: 10px 16px; font-weight: 700; font-size: 14px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn:hover { opacity: 0.92; }
+  .btn.secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn.sm { padding: 6px 11px; font-size: 12px; border-radius: 9px; }
+  .progress-wrap { margin-top: 16px; display: none; }
+  .progress-bar { width: 100%; height: 8px; background: var(--surface2); border-radius: 99px; overflow: hidden; margin: 8px 0; }
+  .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--primary), var(--green)); transition: width .1s; }
+  .shortcuts { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .breadcrumb { font-size: 13px; color: var(--muted); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .file-list { display: grid; gap: 8px; }
+  .file-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 12px 14px; background: var(--surface2); border-radius: 14px; border: 1px solid transparent;
+  }
+  .file-row:hover { border-color: rgba(79,156,249,0.35); }
+  .file-left { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1; cursor: pointer; }
+  .file-icon { width: 36px; height: 36px; border-radius: 10px; background: rgba(79,156,249,0.14); display: grid; place-items: center; font-size: 18px; flex-shrink: 0; }
+  .file-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .file-meta { font-size: 12px; color: var(--muted); }
+  .file-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  textarea {
+    width: 100%; min-height: 110px; background: var(--surface2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 14px; padding: 14px; font-size: 14px; resize: vertical;
+  }
+  .clip-item {
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+    padding: 12px 14px; background: var(--surface2); border-radius: 14px; margin-top: 10px;
+  }
+  .clip-text { font-size: 14px; white-space: pre-wrap; word-break: break-word; flex: 1; }
+  .clip-src { font-size: 11px; color: var(--primary); margin-bottom: 4px; font-weight: 600; }
+  .screen-stage {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: #050810; border-radius: 18px; padding: 16px; min-height: 460px; border: 1px solid var(--border);
+  }
+  .screen-stage img {
+    max-height: 75vh; max-width: 100%; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+    display: none;
+  }
+  .modal {
+    position: fixed; inset: 0; background: rgba(5,8,16,0.85); backdrop-filter: blur(8px);
+    display: none; align-items: center; justify-content: center; z-index: 100; padding: 20px;
+  }
+  .modal.open { display: flex; }
+  .modal-box {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 22px;
+    padding: 24px; max-width: 900px; width: 100%; max-height: 90vh; overflow: auto;
+  }
+  .pin-box { max-width: 380px; text-align: center; }
+  .pin-input {
+    width: 100%; font-size: 28px; letter-spacing: 10px; text-align: center; padding: 14px;
+    background: var(--surface2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 14px; margin: 16px 0; font-weight: 700;
+  }
+  .toast {
+    position: fixed; bottom: 20px; right: 20px; background: var(--surface2); color: var(--text);
+    border: 1px solid var(--primary); padding: 12px 18px; border-radius: 12px; font-size: 13px;
+    display: none; z-index: 200;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="logo">AB</div>
+    <div>
+      <h1 id="deviceTitle">AirBridge Portal</h1>
+      <p id="deviceSub">Kết nối trực tiếp qua Wi-Fi • Không cài đặt trên Mac</p>
+    </div>
+  </div>
+  <div class="status-pill" id="statusPill">Đang kết nối...</div>
+</header>
+
+<nav>
+  <button class="tab active" data-tab="drop">📤 Gửi / Nhận nhanh</button>
+  <button class="tab" data-tab="files">📁 Tệp trên điện thoại</button>
+  <button class="tab" data-tab="clipboard">📋 Clipboard 2 chiều</button>
+  <button class="tab" data-tab="screen">📱 Màn hình điện thoại</button>
+</nav>
+
+<main>
+  <!-- TAB 1: DROP -->
+  <section id="tab-drop" class="panel active">
+    <div class="card">
+      <div class="dropzone" id="dropzone">
+        <h2>Kéo thả ảnh, video hoặc tệp vào đây</h2>
+        <p>Tệp sẽ được lưu thẳng vào <b>Downloads/AirBridge</b> trên điện thoại với tốc độ Wi-Fi LAN</p>
+        <br />
+        <button class="btn" id="pickUploadBtn">Chọn tệp từ Mac / iPhone</button>
+        <input type="file" id="uploadInput" multiple hidden />
+      </div>
+      <div class="progress-wrap" id="uploadProgressWrap">
+        <div id="uploadLabel" style="font-size:13px;color:var(--muted)">Đang tải lên...</div>
+        <div class="progress-bar"><div class="progress-fill" id="uploadProgressFill"></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3 style="font-size:15px;margin-bottom:8px">Lịch sử tải lên trong phiên này</h3>
+      <div id="uploadLog" style="font-size:13px;color:var(--muted)">Chưa có tệp nào được gửi lên.</div>
+    </div>
+  </section>
+
+  <!-- TAB 2: FILES -->
+  <section id="tab-files" class="panel">
+    <div class="card">
+      <div class="shortcuts">
+        <button class="btn secondary sm" onclick="loadDir('')">🏠 Bộ nhớ trong</button>
+        <button class="btn secondary sm" onclick="loadDir('DCIM/Camera')">📷 Camera</button>
+        <button class="btn secondary sm" onclick="loadDir('Pictures')">🖼️ Ảnh</button>
+        <button class="btn secondary sm" onclick="loadDir('Download')">⬇️ Download</button>
+        <button class="btn secondary sm" onclick="loadDir('Download/AirBridge')">⚡ AirBridge</button>
+        <button class="btn secondary sm" onclick="loadDir('Documents')">📄 Documents</button>
+        <button class="btn sm" onclick="document.getElementById('folderUploadInput').click()">⬆️ Tải tệp vào thư mục này</button>
+        <input type="file" id="folderUploadInput" multiple hidden />
+      </div>
+      <div class="breadcrumb" id="breadcrumb">/</div>
+      <div class="file-list" id="fileList">Đang tải danh sách tệp...</div>
+    </div>
+  </section>
+
+  <!-- TAB 3: CLIPBOARD -->
+  <section id="tab-clipboard" class="panel">
+    <div class="card">
+      <h3 style="font-size:16px;margin-bottom:10px">Gửi văn bản / link từ Mac sang Clipboard điện thoại</h3>
+      <textarea id="clipInput" placeholder="Dán hoặc gõ nội dung cần gửi sang OnePlus 13..."></textarea>
+      <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn" id="sendClipBtn">📋 Gửi vào Clipboard điện thoại</button>
+        <button class="btn secondary" id="refreshClipBtn">🔄 Làm mới từ điện thoại</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3 style="font-size:16px;margin-bottom:4px">Lịch sử Clipboard đồng bộ (tự cập nhật)</h3>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Copy trên điện thoại rồi bấm nút Copy ở đây để dán lên Mac.</p>
+      <div id="clipHistory">Chưa có nội dung clipboard.</div>
+    </div>
+  </section>
+
+  <!-- TAB 4: SCREEN MIRROR -->
+  <section id="tab-screen" class="panel">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+        <div>
+          <h3 style="font-size:16px">Truyền màn hình điện thoại trực tiếp</h3>
+          <p style="font-size:12px;color:var(--muted)">Bấm "Bật truyền màn hình" trong app AirBridge trên điện thoại để bắt đầu xem.</p>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn secondary sm" id="reconnectScreenBtn">🔄 Kết nối lại</button>
+          <button class="btn sm" id="fullscreenScreenBtn">⛶ Toàn màn hình</button>
+        </div>
+      </div>
+      <div class="screen-stage" id="screenStage">
+        <img id="screenImg" alt="Android Screen" />
+        <div id="screenPlaceholder" style="text-align:center;color:var(--muted);padding:24px">
+          <div style="font-size:40px;margin-bottom:8px">📱</div>
+          <div>Màn hình điện thoại chưa được bật chia sẻ.</div>
+          <div style="font-size:12px;margin-top:6px">Mở app <b>AirBridge</b> trên điện thoại → bấm <b>Truyền màn hình</b>.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- PIN MODAL -->
+<div class="modal" id="pinModal">
+  <div class="modal-box pin-box">
+    <h2 style="font-size:20px;margin-bottom:6px">Nhập mã PIN ghép nối</h2>
+    <p style="font-size:13px;color:var(--muted)">Xem mã PIN 6 số đang hiển thị trên app AirBridge ở điện thoại.</p>
+    <input id="pinInput" class="pin-input" maxlength="6" inputmode="numeric" placeholder="000000" />
+    <div id="pinErr" style="color:var(--red);font-size:13px;margin-bottom:10px;display:none">Mã PIN không đúng, thử lại.</div>
+    <button class="btn" style="width:100%;justify-content:center" id="pinSubmitBtn">Kết nối</button>
+  </div>
+</div>
+
+<!-- PREVIEW MODAL -->
+<div class="modal" id="previewModal" onclick="if(event.target===this)closePreview()">
+  <div class="modal-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 id="previewTitle" style="font-size:16px;overflow:hidden;text-overflow:ellipsis">Xem trước</h3>
+      <div style="display:flex;gap:8px">
+        <a id="previewDownload" class="btn sm" download>⬇️ Tải về</a>
+        <button class="btn secondary sm" onclick="closePreview()">Đóng</button>
+      </div>
+    </div>
+    <div id="previewBody" style="text-align:center"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let PIN = sessionStorage.getItem('airbridge_pin') || '';
+let currentDir = '';
+let screenActive = false;
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => t.style.display = 'none', 3000);
+}
+
+async function apiFetch(url, opts = {}) {
+  const headers = Object.assign({}, opts.headers || {}, PIN ? { 'X-AirBridge-Pin': PIN } : {});
+  const res = await fetch(url, Object.assign({}, opts, { headers }));
+  if (res.status === 401) {
+    document.getElementById('pinModal').classList.add('open');
+    throw new Error('PIN_REQUIRED');
+  }
+  return res;
+}
+
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    if (btn.dataset.tab === 'files') loadDir(currentDir);
+    if (btn.dataset.tab === 'clipboard') loadClipboard();
+    if (btn.dataset.tab === 'screen') refreshScreenStream();
+  });
+});
+
+document.getElementById('pinSubmitBtn').onclick = async () => {
+  PIN = document.getElementById('pinInput').value.trim();
+  try {
+    const r = await apiFetch('/api/status');
+    if (r.ok) {
+      sessionStorage.setItem('airbridge_pin', PIN);
+      document.getElementById('pinModal').classList.remove('open');
+      document.getElementById('pinErr').style.display = 'none';
+      initStatus();
+      loadDir('');
+      loadClipboard();
+    } else {
+      document.getElementById('pinErr').style.display = 'block';
+    }
+  } catch {
+    document.getElementById('pinErr').style.display = 'block';
+  }
+};
+
+async function initStatus() {
+  try {
+    const r = await apiFetch('/api/status');
+    const data = await r.json();
+    document.getElementById('deviceTitle').textContent = data.deviceName + ' — AirBridge';
+    document.getElementById('deviceSub').textContent = data.modelName + ' • Kết nối trực tiếp không cần cài app trên Mac';
+    document.getElementById('statusPill').textContent = data.screenStreaming ? '🟢 Đang kết nối • Đang phát màn hình' : '🟢 Đang kết nối';
+    if (data.screenStreaming && !screenActive && document.getElementById('tab-screen').classList.contains('active')) {
+      refreshScreenStream();
+    }
+    screenActive = data.screenStreaming;
+  } catch {}
+}
+
+// --- UPLOAD ---
+const dropzone = document.getElementById('dropzone');
+const uploadInput = document.getElementById('uploadInput');
+document.getElementById('pickUploadBtn').onclick = () => uploadInput.click();
+uploadInput.onchange = () => uploadFiles(uploadInput.files, 'Download/AirBridge');
+document.getElementById('folderUploadInput').onchange = (e) => uploadFiles(e.target.files, currentDir || 'Download/AirBridge', true);
+
+dropzone.ondragover = (e) => { e.preventDefault(); dropzone.classList.add('dragover'); };
+dropzone.ondragleave = () => dropzone.classList.remove('dragover');
+dropzone.ondrop = (e) => {
+  e.preventDefault(); dropzone.classList.remove('dragover');
+  if (e.dataTransfer.files.length) uploadFiles(e.dataTransfer.files, 'Download/AirBridge');
+};
+
+async function uploadFiles(fileList, targetDir, reloadAfter = false) {
+  const wrap = document.getElementById('uploadProgressWrap');
+  const fill = document.getElementById('uploadProgressFill');
+  const label = document.getElementById('uploadLabel');
+  const log = document.getElementById('uploadLog');
+  wrap.style.display = 'block';
+  for (let i = 0; i < fileList.length; i++) {
+    const f = fileList[i];
+    label.textContent = `Đang gửi (${i+1}/${fileList.length}): ${f.name} (${fmtBytes(f.size)})`;
+    await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      const url = `/api/upload?path=${encodeURIComponent(targetDir)}&name=${encodeURIComponent(f.name)}&pin=${encodeURIComponent(PIN)}`;
+      xhr.open('POST', url, true);
+      xhr.upload.onprogress = (ev) => {
+        if (ev.lengthComputable) fill.style.width = Math.round((ev.loaded / ev.total) * 100) + '%';
+      };
+      xhr.onload = () => {
+        if (xhr.status === 200) resolve();
+        else reject(new Error('HTTP ' + xhr.status));
+      };
+      xhr.onerror = () => reject(new Error('Network error'));
+      xhr.send(f);
+    });
+    const item = document.createElement('div');
+    item.textContent = `✅ ${f.name} (${fmtBytes(f.size)}) → ${targetDir}`;
+    if (log.textContent.includes('Chưa có tệp')) log.textContent = '';
+    log.prepend(item);
+  }
+  label.textContent = `Hoàn tất gửi ${fileList.length} tệp!`;
+  showToast(`Đã gửi ${fileList.length} tệp sang điện thoại`);
+  if (reloadAfter) loadDir(currentDir);
+}
+
+// --- FILES ---
+async function loadDir(path) {
+  currentDir = path;
+  const listEl = document.getElementById('fileList');
+  const bcEl = document.getElementById('breadcrumb');
+  bcEl.innerHTML = '';
+  const rootBtn = document.createElement('button');
+  rootBtn.className = 'btn secondary sm';
+  rootBtn.textContent = '/';
+  rootBtn.onclick = () => loadDir('');
+  bcEl.appendChild(rootBtn);
+
+  if (path) {
+    const parts = path.split('/').filter(Boolean);
+    let acc = '';
+    parts.forEach(p => {
+      acc = acc ? acc + '/' + p : p;
+      const target = acc;
+      const b = document.createElement('button');
+      b.className = 'btn secondary sm';
+      b.textContent = p;
+      b.onclick = () => loadDir(target);
+      bcEl.appendChild(b);
+    });
+  }
+
+  try {
+    const r = await apiFetch('/api/files?path=' + encodeURIComponent(path));
+    const data = await r.json();
+    if (!r.ok) {
+      listEl.innerHTML = `<div style="color:var(--red);padding:12px">${data.error || 'Chưa cấp quyền đọc toàn bộ tệp trên điện thoại'}</div>`;
+      return;
+    }
+    if (!data.entries.length) {
+      listEl.innerHTML = '<div style="color:var(--muted);padding:16px">Thư mục trống.</div>';
+      return;
+    }
+    listEl.innerHTML = '';
+    data.entries.forEach(e => {
+      const row = document.createElement('div');
+      row.className = 'file-row';
+      const icon = e.isDir ? '📁' : e.mime.startsWith('image/') ? '🖼️' : e.mime.startsWith('video/') ? '🎬' : e.mime === 'application/pdf' ? '📕' : '📄';
+      const fileUrl = `/api/file?path=${encodeURIComponent(e.path)}&pin=${encodeURIComponent(PIN)}`;
+      row.innerHTML = `
+        <div class="file-left">
+          <div class="file-icon">${icon}</div>
+          <div style="min-width:0">
+            <div class="file-name">${escapeHtml(e.name)}</div>
+            <div class="file-meta">${e.isDir ? 'Thư mục' : fmtBytes(e.size)}</div>
+          </div>
+        </div>
+        <div class="file-actions">
+          ${e.isDir ? '' : `<a class="btn secondary sm" href="${fileUrl}&download=1" download>⬇️ Tải</a>`}
+        </div>`;
+      row.querySelector('.file-left').onclick = () => {
+        if (e.isDir) loadDir(e.path);
+        else openPreview(e, fileUrl);
+      };
+      listEl.appendChild(row);
+    });
+  } catch {}
+}
+
+function openPreview(entry, url) {
+  document.getElementById('previewTitle').textContent = entry.name;
+  document.getElementById('previewDownload').href = url + '&download=1';
+  const body = document.getElementById('previewBody');
+  if (entry.mime.startsWith('image/')) {
+    body.innerHTML = `<img src="${url}" style="max-width:100%;max-height:70vh;border-radius:12px" />`;
+  } else if (entry.mime.startsWith('video/')) {
+    body.innerHTML = `<video src="${url}" controls autoplay style="max-width:100%;max-height:70vh;border-radius:12px"></video>`;
+  } else if (entry.mime === 'application/pdf') {
+    body.innerHTML = `<iframe src="${url}" style="width:100%;height:70vh;border:none;border-radius:12px"></iframe>`;
+  } else if (entry.mime.startsWith('text/') || entry.mime.includes('json')) {
+    body.innerHTML = 'Đang tải nội dung...';
+    fetch(url).then(r => r.text()).then(txt => {
+      body.innerHTML = `<pre style="text-align:left;white-space:pre-wrap;background:var(--surface2);padding:16px;border-radius:12px;max-height:70vh;overflow:auto">${escapeHtml(txt)}</pre>`;
+    });
+  } else {
+    body.innerHTML = `<div style="padding:32px;color:var(--muted)">Không hỗ trợ xem trước định dạng này. Bấm <b>Tải về</b> để mở trên Mac.</div>`;
+  }
+  document.getElementById('previewModal').classList.add('open');
+}
+
+function closePreview() {
+  document.getElementById('previewModal').classList.remove('open');
+  document.getElementById('previewBody').innerHTML = '';
+}
+
+// --- CLIPBOARD ---
+async function loadClipboard() {
+  try {
+    const r = await apiFetch('/api/clipboard');
+    const data = await r.json();
+    const wrap = document.getElementById('clipHistory');
+    if (!data.history.length) {
+      wrap.innerHTML = '<div style="color:var(--muted);font-size:13px">Chưa có nội dung clipboard nào.</div>';
+      return;
+    }
+    wrap.innerHTML = '';
+    data.history.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'clip-item';
+      div.innerHTML = `
+        <div style="flex:1;min-width:0">
+          <div class="clip-src">${escapeHtml(item.source)}</div>
+          <div class="clip-text">${escapeHtml(item.text)}</div>
+        </div>
+        <button class="btn secondary sm">Copy</button>`;
+      div.querySelector('button').onclick = async () => {
+        await navigator.clipboard.writeText(item.text);
+        showToast('Đã copy vào Clipboard của Mac!');
+      };
+      wrap.appendChild(div);
+    });
+  } catch {}
+}
+
+document.getElementById('sendClipBtn').onclick = async () => {
+  const text = document.getElementById('clipInput').value;
+  if (!text.trim()) return;
+  try {
+    await apiFetch('/api/clipboard', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+    showToast('Đã đẩy vào Clipboard trên điện thoại!');
+    loadClipboard();
+  } catch {}
+};
+document.getElementById('refreshClipBtn').onclick = loadClipboard;
+
+// --- SCREEN STREAM ---
+function refreshScreenStream() {
+  const img = document.getElementById('screenImg');
+  const ph = document.getElementById('screenPlaceholder');
+  const streamUrl = `/api/screen/stream?pin=${encodeURIComponent(PIN)}&t=${Date.now()}`;
+  img.onload = () => { img.style.display = 'block'; ph.style.display = 'none'; };
+  img.onerror = () => { img.style.display = 'none'; ph.style.display = 'block'; };
+  img.src = streamUrl;
+}
+document.getElementById('reconnectScreenBtn').onclick = refreshScreenStream;
+document.getElementById('fullscreenScreenBtn').onclick = () => {
+  const img = document.getElementById('screenImg');
+  if (img.requestFullscreen) img.requestFullscreen();
+};
+
+function fmtBytes(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1024*1024) return (b/1024).toFixed(1) + ' KB';
+  if (b < 1024*1024*1024) return (b/1024/1024).toFixed(1) + ' MB';
+  return (b/1024/1024/1024).toFixed(2) + ' GB';
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+initStatus();
+setInterval(() => {
+  initStatus();
+  if (document.getElementById('tab-clipboard').classList.contains('active')) loadClipboard();
+}, 4000);
+</script>
+</body>
+</html>
