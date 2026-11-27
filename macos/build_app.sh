@@ -25,6 +25,7 @@ swiftc \
   -framework UniformTypeIdentifiers \
   -o "$MACOS_DIR/AirBridge" \
   "$SCRIPT_DIR/Sources/AirBridgeClient.swift" \
+  "$SCRIPT_DIR/Sources/MacFileReceiver.swift" \
   "$SCRIPT_DIR/Sources/MediaPreviewSheet.swift" \
   "$SCRIPT_DIR/Sources/QrPairingSheet.swift" \
   "$SCRIPT_DIR/Sources/ContentView.swift" \

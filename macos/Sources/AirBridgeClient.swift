@@ -174,6 +174,10 @@ final class AirBridgeMacClient: ObservableObject {
     @Published var uploadProgress: Double = 0
     @Published var isUploading: Bool = false
     @Published var uploadStatus: String = ""
+    @Published var lastReceivedFileURL: URL?
+    @Published var lastReceivedSummary: String = ""
+
+    let macReceiver = MacFileReceiver()
 
     private var pollTimer: Timer?
     private var clipTimer: Timer?
@@ -222,6 +226,7 @@ final class AirBridgeMacClient: ObservableObject {
             reason: "AirBridge real-time clipboard & screen sync"
         )
         startUdpDiscoveryListener()
+        startMacReceiver()
         startPolling()
         if !host.isEmpty && !pin.isEmpty {
             Task { await connect() }
@@ -263,6 +268,7 @@ final class AirBridgeMacClient: ObservableObject {
     }
 
     private func applyAuthHeader(to req: inout URLRequest) {
+        req.setValue("\(macReceiver.port)", forHTTPHeaderField: "X-AirBridge-Mac-Port")
         if !authToken.isEmpty {
             req.setValue(authToken, forHTTPHeaderField: "X-AirBridge-Token")
         } else if !gboardPairingCode.isEmpty {
@@ -270,6 +276,45 @@ final class AirBridgeMacClient: ObservableObject {
             req.setValue(gboardPairingCode, forHTTPHeaderField: "X-AirBridge-Pin")
         } else if !pin.isEmpty {
             req.setValue(pin, forHTTPHeaderField: "X-AirBridge-Pin")
+        }
+    }
+
+    private func startMacReceiver() {
+        macReceiver.onFileReceived = { [weak self] url, name, size in
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                self.lastReceivedFileURL = url
+                let sizeText = ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
+                self.lastReceivedSummary = "Đã nhận: \(name) (\(sizeText))"
+                self.statusMessage = self.lastReceivedSummary
+                self.postLocalNotification(title: "AirBridge — Đã nhận từ Android", body: "\(name) (\(sizeText)) • Lưu tại Downloads/AirBridge")
+                NSWorkspace.shared.activateFileViewerSelecting([url])
+            }
+        }
+        macReceiver.onTextReceived = { [weak self] text in
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                self.lastMacPasteboardCount = NSPasteboard.general.changeCount
+                self.lastSyncedText = text
+                let preview = text.count > 60 ? String(text.prefix(60)) + "…" : text
+                self.lastReceivedSummary = "Đã nhận vào Clipboard: \(preview)"
+                self.statusMessage = self.lastReceivedSummary
+                self.postLocalNotification(title: "AirBridge — Đã chép vào Clipboard", body: preview)
+            }
+        }
+        macReceiver.start()
+    }
+
+    private func postLocalNotification(title: String, body: String) {
+        let escapedTitle = title.replacingOccurrences(of: "\"", with: "\\\"")
+        let escapedBody = body.replacingOccurrences(of: "\"", with: "\\\"")
+            .replacingOccurrences(of: "\n", with: " ")
+        let script = "display notification \"\(escapedBody)\" with title \"\(escapedTitle)\""
+        DispatchQueue.global(qos: .utility).async {
+            let proc = Process()
+            proc.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+            proc.arguments = ["-e", script]
+            try? proc.run()
         }
     }
 

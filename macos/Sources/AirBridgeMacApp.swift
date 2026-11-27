@@ -35,6 +35,18 @@ struct AirBridgeMacApp: App {
                     openWindow(id: "main-window")
                 }
 
+                if let receivedURL = client.lastReceivedFileURL {
+                    Button("Mở tệp vừa nhận: \(receivedURL.lastPathComponent)") {
+                        NSWorkspace.shared.activateFileViewerSelecting([receivedURL])
+                    }
+                }
+
+                Button("Mở thư mục Downloads/AirBridge") {
+                    let dir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Downloads/AirBridge")
+                    try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+                    NSWorkspace.shared.open(dir)
+                }
+
                 Divider()
 
                 Button("Thoát AirBridge") {
